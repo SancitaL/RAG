@@ -1,4 +1,5 @@
 # EvidenceRAG 需求说明
+PyMuPDF == Version 2.0
 
 ## 项目概述
 
