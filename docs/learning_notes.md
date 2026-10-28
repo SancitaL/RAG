@@ -331,4 +331,281 @@ samples/demo.pdf::page:2::chunk:0
 
 固定切分、重叠切分、递归切分、来源继承及真实文档结构实验已通过检查。
 
-学习笔记保存、Git 提交和实验文件版本固定尚待确认。下一天学习 Embedding Fundamentals。
+
+## Day 4 — Embedding Fundamentals
+
+### 1. 今日目标
+
+理解文本如何转换为固定维度向量，手写 Masked Mean Pooling 和 L2 归一化，再使用 Sentence Transformers 生成真实 Embedding。
+
+当前流程：
+
+```text
+文档 → 加载与清洗 → 切分 → Embedding
+```
+
+相似度计算与 Top-K 检索安排在 Day 5。
+
+### 2. Embedding 的作用
+
+Embedding 模型将文本映射为向量：
+
+\[
+f_\theta(text)=\mathbf{v},\qquad \mathbf{v}\in\mathbb{R}^{D}
+\]
+
+其中：
+
+- \(f_\theta\)：参数为 \(\theta\) 的编码模型。
+- \(\mathbf{v}\)：文本向量。
+- \(D\)：向量维度。
+
+训练目标使相关文本有机会获得相近的向量表示，从而支持语义检索。随机生成数字不能得到有用的语义表示。
+
+单个维度通常没有明确、独立的语义名称。模型效果受语言、领域和训练数据影响，需要实际评测。
+
+### 3. 从 Token 到文本向量
+
+```text
+文本
+→ Tokenizer
+→ Token ID
+→ Transformer 上下文向量
+→ Pooling
+→ 可选归一化
+→ 文本向量
+```
+
+Token ID 是编号，不能直接用于计算语义距离。
+
+Token 向量表示各个位置的信息；Pooling 将多个位置的向量聚合成一个文本向量。不同模型可能采用不同的 Pooling 策略，今天学习 Mean Pooling。
+
+### 4. Padding 与 Mask
+
+批量文本长度不同，需要补齐为相同长度。Padding 位置不属于正文，不应参与平均。
+
+Mask 示例：
+
+```text
+文本 A：[token 1, token 2, PAD]
+Mask A：[1,       1,       0]
+```
+
+有效位置为 1，Padding 为 0。
+
+带 Mask 的 Mean Pooling：
+
+\[
+\mathbf{v}
+=
+\frac{\sum_{t=1}^{T}m_t\mathbf{h}_t}
+{\sum_{t=1}^{T}m_t}
+\]
+
+其中：
+
+- \(T\)：补齐后的序列长度。
+- \(\mathbf{h}_t\)：第 \(t\) 个位置的向量。
+- \(m_t\)：对应位置的 Mask。
+- 分母：有效位置数量。
+
+例子：
+
+```text
+向量：[1, 2]、[3, 4]、[100, 100]
+Mask：   1       1          0
+```
+
+结果：
+
+```text
+([1, 2] + [3, 4]) / 2 = [2, 3]
+```
+
+即使 Padding 向量为零，也必须除以有效位置数，而不是补齐后的总位置数。
+
+### 5. Pooling 的 Tensor Shape
+
+| 对象或操作                     | Shape       |
+| ------------------------------ | ----------- |
+| `token_embeddings`             | `[B, T, D]` |
+| `attention_mask`               | `[B, T]`    |
+| `attention_mask.unsqueeze(-1)` | `[B, T, 1]` |
+| 向量乘以扩展后的 Mask          | `[B, T, D]` |
+| 沿 T 求和                      | `[B, D]`    |
+| Mask 沿 T 求和                 | `[B, 1]`    |
+| 除以有效位置数                 | `[B, D]`    |
+
+- `B`：文本条数。
+- `T`：补齐后的 token 位置数。
+- `D`：每个 token 的向量维度。
+
+`sum(dim=1)` 沿 T 聚合，默认移除这一维。全零 Mask 没有可计算的平均值，当前实现抛出 `ValueError`。
+
+### 6. L2 归一化
+
+向量长度：
+
+\[
+\|\mathbf{v}\|_2=\sqrt{\sum_{j=1}^{D}v_j^2}
+\]
+
+归一化：
+
+\[
+\hat{\mathbf{v}}
+=
+\frac{\mathbf{v}}{\max(\|\mathbf{v}\|_2,\varepsilon)}
+\]
+
+例如：
+
+```text
+[3, 4] 的长度为 5
+归一化后为 [0.6, 0.8]
+新长度为 1
+```
+
+归一化保留非零向量的方向，缩放其长度。是否归一化需要遵循模型和检索度量的要求。
+
+`eps` 是人为指定的很小的正数，当前使用 `1e-12`，用于限制分母、避免除零：
+
+```python
+denominator = norms.clamp_min(eps)
+```
+
+零向量保持为零，长度仍为 0。长度小于 `eps` 的非零向量也不保证归一化后为单位长度。
+
+### 7. keepdim 与广播
+
+归一化输入为 `[B, D]`。沿 D 计算长度时使用：
+
+```python
+sum_squared = embeddings.square().sum(dim=1, keepdim=True)
+```
+
+`keepdim=True` 将结果保持为 `[B, 1]`，让每条向量的所有分量除以自己的长度。
+
+如果分母变成 `[B]`，广播会从最后一维对齐，可能报错，也可能在 B 与 D 恰好相等时产生错误结果。
+
+### 8. 编程中修正的问题
+
+- `ndim` 是整数属性，使用 `tensor.ndim`，不加括号。
+- `shape` 表示各维大小；检查 B、T 应比较：
+
+  ```python
+  token_embeddings.shape[:2] == attention_mask.shape
+  ```
+
+- `.sum()` 返回新 Tensor，不会修改原变量，必须接住返回值。
+- 多元素布尔 Tensor 不能直接用于 `if`；检查是否存在零值使用：
+
+  ```python
+  (valid_counts == 0).any()
+  ```
+
+- 模型在函数外加载一次，再传入编码函数，避免重复初始化。
+- `normalize_embeddings=True` 已要求归一化，无需再次手动归一化。
+
+### 9. 数学验证结果
+
+Masked Mean Pooling：
+
+```text
+Pooled:
+[[2, 3],
+ [4, 2]]
+
+Shape: [2, 2]
+Correct: True
+```
+
+全零 Mask 和 B/T 不匹配均正确抛出 `ValueError`。
+
+L2 归一化：
+
+```text
+输入：[3, 4]、[0, 0]、[-3, 4]
+输出：[0.6, 0.8]、[0, 0]、[-0.6, 0.8]
+
+Shape: [3, 2]
+Correct: True
+Finite: True
+Lengths: [1, 0, 1]
+```
+
+### 10. 真实模型编码
+
+模型：
+
+```text
+sentence-transformers/all-MiniLM-L6-v2
+```
+
+本次配置：
+
+```text
+设备：CPU
+输出维度：384
+最大输入长度：256 tokens
+convert_to_tensor：True
+normalize_embeddings：True
+```
+
+三条英文文本的运行结果：
+
+```text
+Shape: [3, 384]
+Lengths: [1, 1, 1]
+Finite: True
+Unit lengths: True
+```
+
+每一行对应一条输入文本，行顺序与输入顺序一致。
+
+模型主要面向英文句子和短段落，中文及专业领域效果需要另外评测。向量形状和长度正确，不代表检索质量已经通过验证。
+
+### 11. Token 数与截断实验
+
+原始长度通过关闭截断的 tokenizer 测量，包含特殊 token；实际输入通过 `model.tokenize()` 检查。
+
+| 输入   | 字符数 | 原始 token 数 | 实际输入 token 数 | 截断 |
+| ------ | -----: | ------------: | ----------------: | ---- |
+| 短文本 |     54 |            13 |                13 | 否   |
+| 长文本 |  3,900 |           802 |               256 | 是   |
+
+结论：
+
+- 字符数不等于 token 数。
+- 模型输出固定维度，不代表读取了完整输入。
+- 超长文本尾部没有参与本次向量生成。
+- 后续切分需要结合实际 tokenizer 和模型输入限制。
+
+实验中的超长序列警告来自关闭截断后的长度测量。实际模型预处理将输入截到 256 tokens，本次没有发生索引错误。
+
+### 12. 环境与下载问题
+
+实际使用环境：
+
+```text
+Python：3.13 系列
+torch==2.14.1
+sentence-transformers==6.2.0
+transformers==5.21.0
+```
+
+首次加载时，访问 Hugging Face 出现 HTTPS 握手超时。排查了终端代理连接后，模型下载、加载和编码成功。
+
+`200 Connection established` 只说明代理接受了隧道请求，还需要继续完成 TLS 握手并收到网站响应。
+
+公开模型的未登录提示没有阻止本次下载。顶部的 macOS 输出重定向提示也没有阻止计算。
+
+### 13. 当前状态与下一步
+
+Day 4 的核心功能与实验验收通过：
+
+- Masked Mean Pooling。
+- L2 归一化和零向量处理。
+- 真实模型编码。
+- 输出形状、有限数值和单位长度检查。
+- Token 数与截断实验。

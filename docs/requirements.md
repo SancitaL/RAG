@@ -1,5 +1,8 @@
 # EvidenceRAG 需求说明
 PyMuPDF == Version 2.0
+torch==2.14.1
+sentence-transformers==6.2.0
+transformers==5.21.0
 
 ## 项目概述
 
