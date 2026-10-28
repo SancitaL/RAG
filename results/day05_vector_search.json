@@ -1,0 +1,32 @@
+{
+  "query": "Why are recurrent models difficult to parallelize?",
+  "source": "samples/example.pdf",
+  "page_number": 2,
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "strategy": "recursive",
+  "chunk_size_characters": 512,
+  "candidate_count": 12,
+  "max_chunk_tokens": 128,
+  "metric": "cosine",
+  "top_k": 3,
+  "results": [
+    {
+      "rank": 1,
+      "chunk_id": "samples/example.pdf::page:2::chunk:1",
+      "score": 0.6976009607315063,
+      "text": "Recurrent models typically factor computation along the symbol positions of the input and output\nsequences. Aligning the positions to steps in computation time, they generate a sequence of hidden\nstates ht, as a function of the previous hidden state ht−1 and the input for position t. This inherently\nsequential nature precludes parallelization within training examples, which becomes critical at longer\nsequence lengths, as memory constraints limit batching across examples. Recent work has achieved\n"
+    },
+    {
+      "rank": 2,
+      "chunk_id": "samples/example.pdf::page:2::chunk:0",
+      "score": 0.5200211405754089,
+      "text": "1  Introduction\n\n\nRecurrent neural networks, long short-term memory [13] and gated recurrent [7] neural networks\nin particular, have been firmly established as state of the art approaches in sequence modeling and\ntransduction problems such as language modeling and machine translation [35, 2, 5]. Numerous\nefforts have since continued to push the boundaries of recurrent language models and encoder-decoder\narchitectures [38, 24, 15].\n\n"
+    },
+    {
+      "rank": 3,
+      "chunk_id": "samples/example.pdf::page:2::chunk:3",
+      "score": 0.502897322177887,
+      "text": "Attention mechanisms have become an integral part of compelling sequence modeling and transduc-\ntion models in various tasks, allowing modeling of dependencies without regard to their distance in\nthe input or output sequences [2, 19]. In all but a few cases [27], however, such attention mechanisms\nare used in conjunction with a recurrent network.\n\n"
+    }
+  ]
+}
