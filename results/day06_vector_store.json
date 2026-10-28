@@ -1,0 +1,56 @@
+{
+  "query": "Why are recurrent models difficult to parallelize?",
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "collection": "day06_paper_minilm",
+  "metric": "cosine",
+  "chunk_size_characters": 512,
+  "candidate_count": 12,
+  "dimension": 384,
+  "max_chunk_tokens": 128,
+  "source_filter": "samples/example.pdf",
+  "top_k": 3,
+  "results": [
+    {
+      "rank": 1,
+      "point_id": "34909243-6183-5298-a2ec-68a308360114",
+      "score": 0.6976008710194257,
+      "payload": {
+        "chunk_id": "samples/example.pdf::page:2::chunk:1",
+        "document_id": "samples/example.pdf::page:2",
+        "text": "Recurrent models typically factor computation along the symbol positions of the input and output\nsequences. Aligning the positions to steps in computation time, they generate a sequence of hidden\nstates ht, as a function of the previous hidden state ht−1 and the input for position t. This inherently\nsequential nature precludes parallelization within training examples, which becomes critical at longer\nsequence lengths, as memory constraints limit batching across examples. Recent work has achieved\n",
+        "source": "samples/example.pdf",
+        "file_type": "pdf",
+        "page_number": 2,
+        "chunk_index": 1
+      }
+    },
+    {
+      "rank": 2,
+      "point_id": "9cb0b5ec-6f53-555c-91a3-425652a3e5a8",
+      "score": 0.5200211850354743,
+      "payload": {
+        "chunk_id": "samples/example.pdf::page:2::chunk:0",
+        "document_id": "samples/example.pdf::page:2",
+        "text": "1  Introduction\n\n\nRecurrent neural networks, long short-term memory [13] and gated recurrent [7] neural networks\nin particular, have been firmly established as state of the art approaches in sequence modeling and\ntransduction problems such as language modeling and machine translation [35, 2, 5]. Numerous\nefforts have since continued to push the boundaries of recurrent language models and encoder-decoder\narchitectures [38, 24, 15].\n\n",
+        "source": "samples/example.pdf",
+        "file_type": "pdf",
+        "page_number": 2,
+        "chunk_index": 0
+      }
+    },
+    {
+      "rank": 3,
+      "point_id": "c073c1eb-1ce4-5689-ab8b-a25ca1edc348",
+      "score": 0.5028972537959718,
+      "payload": {
+        "chunk_id": "samples/example.pdf::page:2::chunk:3",
+        "document_id": "samples/example.pdf::page:2",
+        "text": "Attention mechanisms have become an integral part of compelling sequence modeling and transduc-\ntion models in various tasks, allowing modeling of dependencies without regard to their distance in\nthe input or output sequences [2, 19]. In all but a few cases [27], however, such attention mechanisms\nare used in conjunction with a recurrent network.\n\n",
+        "source": "samples/example.pdf",
+        "file_type": "pdf",
+        "page_number": 2,
+        "chunk_index": 3
+      }
+    }
+  ]
+}
