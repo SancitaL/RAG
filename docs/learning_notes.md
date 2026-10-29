@@ -1047,3 +1047,90 @@ Why are recurrent models difficult to parallelize?
 - Tokenizer 字段名是 `input_ids`。
 - 使用 `try/finally` 确保客户端关闭。
 
+
+
+## Day 7 — Baseline Retrieval System
+
+### 目标与实现
+
+集成 Document → Chunk → Embed → Store → Retrieve，完成不带 LLM 的基础检索系统。
+
+文件：`experiments/baseline_retrieval.py`。
+
+- `prepare_chunks()`：按后缀选择加载器，生成平坦的 Chunk 列表，过滤空白正文并检查重复 ID。
+- `build_index()`：检查片段 token 长度，编码文档，创建 Point 并写入 Qdrant。
+- `retrieve()`：检查问题，编码问题并查询已保存的文档向量。
+- 使用 argparse 提供 `--mode index` 和 `--mode query` 两个入口。
+
+查询分支不调用文档加载、切分或索引函数。每个查询进程仍需加载 Embedding 模型。
+
+### 实际索引结果
+
+```text
+TXT chunks: 1
+Markdown chunks: 1
+PDF chunks: 125
+Total chunks: 127
+Dimension: 384
+Max chunk tokens: 159
+Stored points: 127
+Count matches: True
+```
+
+所有片段正文非空、字符长度不超过 512、ID 唯一，PDF 保留物理页码。实际 token 数低于模型的 256 上限。
+
+数据库路径：`indexes/day07_baseline`。
+Collection：`day07_minilm`。
+模型：`sentence-transformers/all-MiniLM-L6-v2`，CPU、归一化向量。
+
+### 集成验证与结果分析
+
+- 独立进程可以查询之前保存的索引。
+- PDF 问题返回 3 条结果，第一名为物理第 2 页的 chunk 1，分数 0.6976。
+- 第一名包含循环模型隐藏状态顺序依赖限制并行化的直接依据。
+- 第二名是参考文献，分数 0.5460；第三名是摘要背景，分数 0.5449。
+- 语义相关不一定意味着包含直接答案，参考文献可能成为干扰候选。
+- TXT 与 Markdown 来源各只有一个候选，验证了格式接入、过滤和正文返回，不能单独证明排序质量。
+- 不存在的来源返回 0 条记录。
+- 空白问题被参数解析器拒绝。
+- top_k=0 返回空列表。
+
+未限制来源时，无关问题仍可能得到 Top-K。当前尚未实现证据充分性判定或拒答。
+
+### 结果留档
+
+四次查询保存到 `results/day07_queries.jsonl`，每行一条 JSON：
+
+```text
+data/samples/example.pdf 3
+data/samples/example.txt 1
+data/samples/example.md 1
+data/samples/not_indexed.txt 0
+```
+
+保存问题、模型、Collection、来源过滤、Top-K、结果数量、分数和 Payload。追加写入会保留重复运行记录，后续分析需注意实验条件。
+
+### 环境与易错点
+
+Hugging Face 的附加模板目录请求出现 SSL 错误。使用已有模型缓存运行：
+
+```bash
+HF_HUB_OFFLINE=1 python3 -u -m experiments.baseline_retrieval --mode index
+```
+
+离线方式依赖本地缓存完整，新环境仍需先获取模型。
+
+编程易错点：
+
+- `path.as_posix()` 需要调用。
+- 切分器返回列表，需逐个加入，避免嵌套。
+- `input_ids` 是 token 编号列表，使用 `len()` 得到数量。
+- Tensor 使用 `.detach().cpu().numpy()` 转为 NumPy。
+- 向量维度读取 `.shape[0]` 或矩阵的 `.shape[1]`。
+- 调用函数需要括号，返回结果需要 `return`。
+
+### 当前状态与限制
+
+基础检索主链路和上述集成案例通过，四次查询结果已保存。
+
+本轮未逐项运行所有异常分支；尚未完成新环境复现、正式检索指标或大规模性能评测。当前 Upsert 不会自动清理文档更新后遗留的旧片段
