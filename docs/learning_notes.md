@@ -1129,8 +1129,60 @@ HF_HUB_OFFLINE=1 python3 -u -m experiments.baseline_retrieval --mode index
 - 向量维度读取 `.shape[0]` 或矩阵的 `.shape[1]`。
 - 调用函数需要括号，返回结果需要 `return`。
 
-### 当前状态与限制
 
-基础检索主链路和上述集成案例通过，四次查询结果已保存。
+## Day 8 — BM25 Retrieval
 
-本轮未逐项运行所有异常分支；尚未完成新环境复现、正式检索指标或大规模性能评测。当前 Upsert 不会自动清理文档更新后遗留的旧片段
+### 实现
+
+- 使用小写转换和 `[a-z0-9]+` 分词。
+- 使用 Counter 统计词频，建立 term → {doc_index: frequency} 倒排索引。
+- 保存片段 token 长度，计算平均长度。
+- 实现 BM25：IDF × 带长度修正的词频权重，对去重后的查询词累加。
+- 参数：k1=1.2，b=0.75。
+- Top-K 仅返回正分片段；同分时按片段编号升序排列。
+- 通过编号映射回 Chunk，保留正文、来源和页码。
+
+### 公式
+
+IDF(t) = ln(1 + (N - df(t) + 0.5) / (df(t) + 0.5))
+
+L(d) = 1 - b + b × len(d) / avgdl
+
+score(q,d) = Σ IDF(t) × f(t,d) × (k1+1) / (f(t,d) + k1×L(d))
+
+其中：
+- N：片段总数。
+- df(t)：包含词 t 的片段数量。
+- f(t,d)：词 t 在片段 d 中的出现次数。
+- len(d)：当前分词器得到的片段 token 数。
+- avgdl：所有片段的平均 token 数。
+
+### 实验结果
+
+语料：TXT、Markdown、PDF，共127个片段，词表1620项。
+切分上限：512字符；此处不是512个模型token。
+
+目标证据：data/samples/example.pdf::page:2::chunk:1。
+
+| 查询                                               | 目标证据表现   |
+| -------------------------------------------------- | -------------- |
+| Why are recurrent models difficult to parallelize? | 未进入Top-3    |
+| recurrent models parallelization                   | 第1名，6.3121  |
+| previous hidden state sequential                   | 第1名，10.9890 |
+
+Day 7 Dense对原始问句将目标证据排在第1名，分数0.6976。
+BM25分数与Dense余弦分数不能直接比较。
+
+当前BM25依赖词面匹配，不做词干归一化或停用词过滤，
+例如parallelize与parallelization不会匹配。
+后两个查询借用了已知答案中的措辞，仅用于观察查询敏感性，
+不能作为整体检索质量提高的证明。
+
+### 验证
+
+- 未知词、top_k=0：返回空列表。
+- 空语料、全零长度片段：评分正常返回。
+- 重复查询词只计一次。
+- 同分排序及浮点分数检查通过。
+- 空白查询、非法k1、非法b、空建索引输入：拒绝。
+- results/day08_bm25.json保存3条查询实验，并重新读取验证。

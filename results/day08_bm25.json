@@ -1,0 +1,99 @@
+{
+  "chunk_count": 127,
+  "vocabulary_size": 1620,
+  "chunk_size": 512,
+  "k1": 1.2,
+  "b": 0.75,
+  "experiments": [
+    {
+      "query": "Why are recurrent models difficult to parallelize?",
+      "result_count": 3,
+      "results": [
+        {
+          "rank": 1,
+          "score": 6.109443852831361,
+          "chunk_id": "data/samples/example.pdf::page:1::chunk:4",
+          "source": "data/samples/example.pdf",
+          "page_number": 1,
+          "text": "\n                         The dominant sequence transduction models are based on complex recurrent or\n                               convolutional neural networks that include an encoder and a decoder. The best\n                             performing models also connect the encoder and decoder through an attention\n                           mechanism. We propose a new simple network architecture, the Transformer,\n"
+        },
+        {
+          "rank": 2,
+          "score": 6.063104750115187,
+          "chunk_id": "data/samples/example.pdf::page:4::chunk:7",
+          "source": "data/samples/example.pdf",
+          "page_number": 4,
+          "text": "   4To illustrate why the dot products get large, assume that the components of q and k are independent random\nvariables with mean 0 and variance 1. Then their dot product, q · k = Pdki=1 qiki, has mean 0 and variance dk.\n\n\n                                       4"
+        },
+        {
+          "rank": 3,
+          "score": 5.741031311517868,
+          "chunk_id": "data/samples/example.pdf::page:2::chunk:3",
+          "source": "data/samples/example.pdf",
+          "page_number": 2,
+          "text": "Attention mechanisms have become an integral part of compelling sequence modeling and transduc-\ntion models in various tasks, allowing modeling of dependencies without regard to their distance in\nthe input or output sequences [2, 19]. In all but a few cases [27], however, such attention mechanisms\nare used in conjunction with a recurrent network.\n\n"
+        }
+      ]
+    },
+    {
+      "query": "recurrent models parallelization",
+      "result_count": 3,
+      "results": [
+        {
+          "rank": 1,
+          "score": 6.312137007705827,
+          "chunk_id": "data/samples/example.pdf::page:2::chunk:1",
+          "source": "data/samples/example.pdf",
+          "page_number": 2,
+          "text": "Recurrent models typically factor computation along the symbol positions of the input and output\nsequences. Aligning the positions to steps in computation time, they generate a sequence of hidden\nstates ht, as a function of the previous hidden state ht−1 and the input for position t. This inherently\nsequential nature precludes parallelization within training examples, which becomes critical at longer\nsequence lengths, as memory constraints limit batching across examples. Recent work has achieved\n"
+        },
+        {
+          "rank": 2,
+          "score": 4.409169606645047,
+          "chunk_id": "data/samples/example.pdf::page:2::chunk:0",
+          "source": "data/samples/example.pdf",
+          "page_number": 2,
+          "text": "1  Introduction\n\n\nRecurrent neural networks, long short-term memory [13] and gated recurrent [7] neural networks\nin particular, have been firmly established as state of the art approaches in sequence modeling and\ntransduction problems such as language modeling and machine translation [35, 2, 5]. Numerous\nefforts have since continued to push the boundaries of recurrent language models and encoder-decoder\narchitectures [38, 24, 15].\n\n"
+        },
+        {
+          "rank": 3,
+          "score": 4.315342020324197,
+          "chunk_id": "data/samples/example.pdf::page:1::chunk:4",
+          "source": "data/samples/example.pdf",
+          "page_number": 1,
+          "text": "\n                         The dominant sequence transduction models are based on complex recurrent or\n                               convolutional neural networks that include an encoder and a decoder. The best\n                             performing models also connect the encoder and decoder through an attention\n                           mechanism. We propose a new simple network architecture, the Transformer,\n"
+        }
+      ]
+    },
+    {
+      "query": "previous hidden state sequential",
+      "result_count": 3,
+      "results": [
+        {
+          "rank": 1,
+          "score": 10.989028278020204,
+          "chunk_id": "data/samples/example.pdf::page:2::chunk:1",
+          "source": "data/samples/example.pdf",
+          "page_number": 2,
+          "text": "Recurrent models typically factor computation along the symbol positions of the input and output\nsequences. Aligning the positions to steps in computation time, they generate a sequence of hidden\nstates ht, as a function of the previous hidden state ht−1 and the input for position t. This inherently\nsequential nature precludes parallelization within training examples, which becomes critical at longer\nsequence lengths, as memory constraints limit batching across examples. Recent work has achieved\n"
+        },
+        {
+          "rank": 2,
+          "score": 6.400571124554716,
+          "chunk_id": "data/samples/example.pdf::page:8::chunk:0",
+          "source": "data/samples/example.pdf",
+          "page_number": 8,
+          "text": "Table 2: The Transformer achieves better BLEU scores than previous state-of-the-art models on the\nEnglish-to-German and English-to-French newstest2014 tests at a fraction of the training cost.\n\n"
+        },
+        {
+          "rank": 3,
+          "score": 5.040945164301473,
+          "chunk_id": "data/samples/example.pdf::page:2::chunk:5",
+          "source": "data/samples/example.pdf",
+          "page_number": 2,
+          "text": "\nThe goal of reducing sequential computation also forms the foundation of the Extended Neural GPU\n[16], ByteNet [18] and ConvS2S [9], all of which use convolutional neural networks as basic building\nblock, computing hidden representations in parallel for all input and output positions. In these models,\nthe number of operations required to relate signals from two arbitrary input or output positions grows\nin the distance between positions, linearly for ConvS2S and logarithmically for ByteNet. This makes\n"
+        }
+      ]
+    }
+  ]
+}
