@@ -1186,3 +1186,53 @@ BM25分数与Dense余弦分数不能直接比较。
 - 同分排序及浮点分数检查通过。
 - 空白查询、非法k1、非法b、空建索引输入：拒绝。
 - results/day08_bm25.json保存3条查询实验，并重新读取验证。
+
+
+
+## Day 9 — Dense Retrieval
+
+### 实现与原理
+
+- 封装 dense_search，复用已有 retrieve。
+- 正确传递 top_k 和 source 参数。
+- 模型：sentence-transformers/all-MiniLM-L6-v2，384维。
+- 查询与文档使用同一模型，向量进行L2归一化。
+- Qdrant使用Cosine；单位向量的余弦相似度等于点积。
+- 相似度分数不是答案正确率，也不是概率。
+
+### 同条件对比
+
+同一批127个Chunk，切分上限512字符，top_k=3，不使用来源过滤。
+BM25与临时内存Qdrant索引均由同一份Chunk构建。
+编码前检查完整token数，防止文档被静默截断。
+
+| 查询                                               | 已检查的答案片段：BM25排名 | Dense排名 |
+| -------------------------------------------------- | -------------------------- | --------- |
+| Why are recurrent models difficult to parallelize? | 未进入Top-3                | 1         |
+| recurrent models parallelization                   | 1                          | 1         |
+| What do PyTorch tensors store?                     | 1                          | 1         |
+| How are model parameters updated?                  | 1                          | 2         |
+
+参数更新问题中，Dense第一名为论文作者贡献说明，
+未解释参数更新；第二名Markdown包含optimizer.step()。
+
+### 观察与限制
+
+- Dense在原始并行化问句上找到直接证据。
+- 查询使用正文原词时，BM25和Dense均找到目标片段。
+- 参数更新问题中，BM25的答案片段排名更靠前。
+- 两种方法均可能返回无法回答问题的片段。
+- BM25分数和Dense分数不能直接比较大小。
+- 四条查询属于探索性实验，不能据此判断整体优劣。
+- parallelization查询参考了已知证据措辞，不属于独立评测。
+- 尚未进行Hybrid融合或正式评测集评估。
+
+### 验证与产物
+
+- top_k=1返回一条结果。
+- top_k=0返回空列表。
+- 不存在的来源返回空列表，已有来源过滤正确。
+- 空白查询、不存在的集合、超长查询均被拒绝。
+- 超长查询测得259 tokens，超过256上限，在编码前拒绝。
+- results/day09_retrieval_comparison.json保存四组对比，
+  每组BM25和Dense各三条，并重新读取验证。
